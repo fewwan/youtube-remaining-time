@@ -6,44 +6,55 @@ function getFormattedTime(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = Math.floor(seconds % 60);
+    const pad = (n) => n < 10 ? `0${n}` : n;
 
-    const padWithZero = (num) => (num < 10 ? `0${num}` : num);
-
-    if (hours > 0) {
-        return `${hours}:${padWithZero(minutes)}:${padWithZero(remainingSeconds)}`;
-    } else {
-        return `${minutes}:${padWithZero(remainingSeconds)}`;
-    }
+    return hours > 0
+        ? `${hours}:${pad(minutes)}:${pad(remainingSeconds)}`
+        : `${minutes}:${pad(remainingSeconds)}`;
 }
-
 
 function initializeRemainingTime() {
     const video = document.querySelector("video");
-    const timeDisplay = document.querySelector(".ytp-time-display.notranslate > span:nth-child(2)");
-    if (!video || !timeDisplay) return;
+    const durationSpan = document.querySelector(".ytp-time-duration");
 
-    let timeRemainingSpan = timeDisplay.querySelector("span.ytp-time-remaining");
+    if (!video || !durationSpan || !durationSpan.parentElement) return false;
 
-    if (!timeRemainingSpan) {
-        const timeRemainingSeparatorSpan = document.createElement("span");
-        timeRemainingSeparatorSpan.classList.add("ytp-time-remaining-separator");
-        timeRemainingSeparatorSpan.innerText = " | ";
+    if (durationSpan.parentElement.querySelector(".ytp-time-remaining")) return true;
+    const durationColor = window.getComputedStyle(durationSpan).color;
 
-        timeRemainingSpan = document.createElement("span");
-        timeRemainingSpan.classList.add("ytp-time-remaining");
+    const separator = document.createElement("span");
+    separator.className = "ytp-time-remaining-separator";
+    separator.style.color = durationColor;
+    separator.innerText = " | ";
 
-        timeDisplay.append(timeRemainingSeparatorSpan);
-        timeDisplay.append(timeRemainingSpan);
-    }
+    const remainingSpan = document.createElement("span");
+    remainingSpan.className = "ytp-time-remaining";
+    remainingSpan.style.color = durationColor;
+
+    durationSpan.parentElement.append(separator, remainingSpan);
 
     function updateRemainingTime() {
         const remainingSeconds = video.duration - video.currentTime;
-        const formattedTime = getFormattedTime(remainingSeconds > 0 ? remainingSeconds : 0);
-        timeRemainingSpan.innerText = `-${formattedTime}`;
+        const formatted = getFormattedTime(Math.max(remainingSeconds, 0));
+        remainingSpan.innerText = `-${formatted}`;
     }
 
     video.addEventListener("timeupdate", updateRemainingTime);
     updateRemainingTime();
+
+    return true;
+}
+
+function observeForVideoUI() {
+    const observer = new MutationObserver(() => {
+        initializeRemainingTime();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
 }
 
 initializeRemainingTime();
+observeForVideoUI();
